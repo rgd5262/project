@@ -5,18 +5,16 @@ OO은행 영업점 직원용 내부 VOC 시스템을 시연하기 위한 Streaml
 ## 설치
 
 ```bash
-cd /Users/heeyongkim/study/ax_intensive/260620
 python3 -m pip install -r shinmungo/requirements.txt
 ```
 
 ## 실행
 
 ```bash
-cd /Users/heeyongkim/study/ax_intensive/260620
 streamlit run shinmungo/app.py
 ```
 
-최초 실행 시 `/Users/heeyongkim/study/ax_intensive/260620/shinmungo/shinmungo.db`가 생성되고, `/Users/heeyongkim/study/ax_intensive/260620/data/terminal_synthetic_xlsx/`의 raw 엑셀 3개를 기준으로 시드 데이터가 들어갑니다.
+최초 실행 시 `./shinmungo/shinmungo.db`가 생성되고, `./data/terminal_synthetic_xlsx/`의 raw 엑셀 3개를 기준으로 시드 데이터가 들어갑니다.
 
 ## 아키텍처
 
@@ -71,8 +69,6 @@ streamlit run shinmungo/app.py
 - 로컬 임베딩 모델 로딩에 실패하면 앱 부팅을 막지 않고 `간이 로컬 벡터`로 폴백합니다.
 - 자동 분류는 프로젝트 루트 `.env`의 `OPENAI_API_KEY`가 있으면 `gpt-5.5`를 사용하고, 실패하거나 키가 없으면 키워드 규칙으로 폴백합니다.
 - RAG 답변 초안과 유사 사례 요약도 `OPENAI_API_KEY` 기반 `gpt-5.5`를 사용하며, 키가 없거나 호출 실패 시 템플릿 기반 오프라인 폴백으로 동작합니다.
-- 청킹은 `/Users/heeyongkim/study/ax_intensive/260613/Untitled.ipynb`의 `RecursiveCharacterTextSplitter.from_tiktoken_encoder(...)` 패턴을 반영했습니다.
-- LLM 연동은 `/Users/heeyongkim/study/ax_intensive/260530/rag/Untitled.ipynb`의 `load_dotenv()` + `ChatOpenAI(model="gpt-5.5")` 패턴을 반영했습니다.
 
 ## AI 기능
 
@@ -93,4 +89,3 @@ streamlit run shinmungo/app.py
 
 - `.env`에 `OPENAI_API_KEY`가 있으면 자동분류와 RAG 초안/요약에서 `gpt-5.5`를 사용합니다.
 - 키가 없거나 API 호출이 실패하면 규칙 기반 분류와 템플릿 기반 RAG 폴백으로 동일한 시연 흐름을 유지합니다.
-- `ANTHROPIC_API_KEY`와 Anthropic SDK는 사용하지 않습니다.
