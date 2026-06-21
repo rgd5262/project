@@ -1,0 +1,13 @@
+streamlit
+sqlalchemy
+pandas
+openpyxl
+numpy
+sentence-transformers
+python-dotenv
+langchain-openai
+langchain-core
+langchain-text-splitters
+tiktoken
+plotly
+networkx
