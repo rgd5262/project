@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 0;
+        height: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      const COMPONENT_API_VERSION = 1;
+
+      const sendMessage = (type, data = {}) => {
+        window.parent.postMessage(
+          {
+            isStreamlitMessage: true,
+            type,
+            ...data,
+          },
+          "*",
+        );
+      };
+
+      const setComponentValue = (value) => {
+        sendMessage("streamlit:setComponentValue", { value });
+      };
+
+      const setFrameHeight = () => {
+        sendMessage("streamlit:setFrameHeight", { height: 0 });
+      };
+
+      const cleanupExisting = () => {
+        if (window.parent.__shinmungoAreaSelectorCleanup) {
+          window.parent.__shinmungoAreaSelectorCleanup();
+        }
+      };
+
+      const startSelector = (screen) => {
+        const win = window.parent;
+        const doc = win.document;
+        cleanupExisting();
+
+        const overlay = doc.createElement("div");
+        overlay.id = "shinmungo-area-selection-box";
+        Object.assign(overlay.style, {
+          position: "fixed",
+          zIndex: "2147483000",
+          pointerEvents: "none",
+          display: "none",
+          border: "2px solid #2563eb",
+          background: "rgba(37, 99, 235, 0.12)",
+          boxShadow: "0 0 0 9999px rgba(15, 23, 42, 0.16)",
+          borderRadius: "4px",
+        });
+
+        const label = doc.createElement("div");
+        label.id = "shinmungo-area-selection-label";
+        Object.assign(label.style, {
+          position: "fixed",
+          zIndex: "2147483001",
+          pointerEvents: "none",
+          display: "none",
+          padding: "5px 8px",
+          borderRadius: "4px",
+          background: "#1d4ed8",
+          color: "#ffffff",
+          font: "700 12px system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+          boxShadow: "0 4px 14px rgba(15, 23, 42, 0.24)",
+        });
+
+        const guide = doc.createElement("div");
+        guide.id = "shinmungo-area-selection-guide";
+        guide.innerHTML = '<span>수정 요청할 영역을 클릭하세요 · ESC 또는 취소</span>';
+        Object.assign(guide.style, {
+          position: "fixed",
+          zIndex: "2147483002",
+          left: "50%",
+          top: "14px",
+          transform: "translateX(-50%)",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          padding: "10px 12px 10px 14px",
+          border: "1px solid #1d4ed8",
+          borderRadius: "999px",
+          background: "#eff6ff",
+          color: "#0f172a",
+          font: "800 13px system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.22)",
+        });
+
+        doc.body.appendChild(overlay);
+        doc.body.appendChild(label);
+        doc.body.appendChild(guide);
+        doc.body.classList.add("shinmungo-area-selecting");
+
+        const getTarget = (event) => {
+          const raw =
+            event.target && event.target.closest
+              ? event.target.closest('[data-shinmungo-target="true"]')
+              : null;
+          if (!raw) return null;
+          if (raw.closest('section[data-testid="stSidebar"], div[role="dialog"]')) return null;
+          if (!raw.closest(".terminal-left, .terminal-main")) return null;
+          return raw;
+        };
+
+        const hideOverlay = () => {
+          overlay.style.display = "none";
+          label.style.display = "none";
+        };
+
+        const showOverlay = (target) => {
+          const rect = target.getBoundingClientRect();
+          overlay.style.display = "block";
+          overlay.style.left = `${Math.round(rect.left)}px`;
+          overlay.style.top = `${Math.round(rect.top)}px`;
+          overlay.style.width = `${Math.round(rect.width)}px`;
+          overlay.style.height = `${Math.round(rect.height)}px`;
+          label.style.display = "block";
+          label.textContent = target.dataset.areaName || "선택 영역";
+          label.style.left = `${Math.round(rect.left)}px`;
+          label.style.top = `${Math.round(Math.max(8, rect.top - 30))}px`;
+        };
+
+        const selectTarget = (target) => {
+          const rect = target.getBoundingClientRect();
+          const text = (target.innerText || target.textContent || "")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 700);
+          const payload = {
+            screen_code: screen.screen_code,
+            screen_name: screen.screen_name,
+            business_category: screen.business_category,
+            area_id: target.dataset.areaId || "",
+            area_name: target.dataset.areaName || "선택 영역",
+            area_type: target.dataset.areaType || "업무영역",
+            text,
+            rect: {
+              x: Math.round(rect.left),
+              y: Math.round(rect.top),
+              width: Math.round(rect.width),
+              height: Math.round(rect.height),
+            },
+          };
+          cleanup();
+          setComponentValue(payload);
+        };
+
+        const onMouseMove = (event) => {
+          const target = getTarget(event);
+          if (!target) {
+            hideOverlay();
+            return;
+          }
+          showOverlay(target);
+        };
+
+        const onClick = (event) => {
+          const target = getTarget(event);
+          if (!target) return;
+          event.preventDefault();
+          event.stopPropagation();
+          selectTarget(target);
+        };
+
+        const cancelSelection = () => {
+          cleanup();
+          const url = new URL(win.location.href);
+          url.searchParams.set("area_select_cancel", "1");
+          win.location.href = url.toString();
+        };
+
+        const onKeyDown = (event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            cancelSelection();
+          }
+        };
+
+        function cleanup() {
+          doc.removeEventListener("mousemove", onMouseMove, true);
+          doc.removeEventListener("click", onClick, true);
+          doc.removeEventListener("keydown", onKeyDown, true);
+          overlay.remove();
+          label.remove();
+          guide.remove();
+          doc.body.classList.remove("shinmungo-area-selecting");
+          win.__shinmungoAreaSelectorCleanup = null;
+        }
+
+        doc.addEventListener("mousemove", onMouseMove, true);
+        doc.addEventListener("click", onClick, true);
+        doc.addEventListener("keydown", onKeyDown, true);
+        win.__shinmungoAreaSelectorCleanup = cleanup;
+      };
+
+      window.addEventListener("message", (event) => {
+        if (!event.data || event.data.type !== "streamlit:render") return;
+        const args = event.data.args || {};
+        setFrameHeight();
+        if (args.active && args.screen) {
+          startSelector(args.screen);
+        } else {
+          cleanupExisting();
+        }
+      });
+
+      sendMessage("streamlit:componentReady", { apiVersion: COMPONENT_API_VERSION });
+      setFrameHeight();
+    </script>
+  </body>
+</html>
